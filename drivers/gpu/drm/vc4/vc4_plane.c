@@ -618,11 +618,13 @@ static int vc4_plane_allocate_lbm(struct drm_plane_state *state)
 	return 0;
 }
 
-/*
- * The colorspace conversion matrices are held in 3 entries in the dlist.
+/* The colorspace conversion matrices are held in 3 entries in the dlist.
  * Create an array of them, with entries for each full and limited mode, and
  * each supported colorspace.
  */
+#define VC4_LIMITED_RANGE	0
+#define VC4_FULL_RANGE		1
+
 static const u32 colorspace_coeffs[2][DRM_COLOR_ENCODING_MAX][3] = {
 	{
 		/* Limited range */
@@ -637,10 +639,10 @@ static const u32 colorspace_coeffs[2][DRM_COLOR_ENCODING_MAX][3] = {
 			SCALER_CSC1_ITR_R_709_3,
 			SCALER_CSC2_ITR_R_709_3,
 		}, {
-			/* BT2020 */
-			SCALER_CSC0_ITR_R_2020,
-			SCALER_CSC1_ITR_R_2020,
-			SCALER_CSC2_ITR_R_2020,
+			/* BT2020. Not supported yet - copy 601 */
+			SCALER_CSC0_ITR_R_601_5,
+			SCALER_CSC1_ITR_R_601_5,
+			SCALER_CSC2_ITR_R_601_5,
 		}
 	}, {
 		/* Full range */
@@ -655,55 +657,13 @@ static const u32 colorspace_coeffs[2][DRM_COLOR_ENCODING_MAX][3] = {
 			SCALER_CSC1_ITR_R_709_3_FR,
 			SCALER_CSC2_ITR_R_709_3_FR,
 		}, {
-			/* BT2020 */
-			SCALER_CSC0_ITR_R_2020_FR,
-			SCALER_CSC1_ITR_R_2020_FR,
-			SCALER_CSC2_ITR_R_2020_FR,
+			/* BT2020. Not supported yet - copy JFIF */
+			SCALER_CSC0_JPEG_JFIF,
+			SCALER_CSC1_JPEG_JFIF,
+			SCALER_CSC2_JPEG_JFIF,
 		}
 	}
 };
-
-static u32 vc4_hvs4_get_alpha_blend_mode(struct drm_plane_state *state)
-{
-	if (!state->fb->format->has_alpha)
-		return VC4_SET_FIELD(SCALER_POS2_ALPHA_MODE_FIXED,
-				     SCALER_POS2_ALPHA_MODE);
-
-	switch (state->pixel_blend_mode) {
-	case DRM_MODE_BLEND_PIXEL_NONE:
-		return VC4_SET_FIELD(SCALER_POS2_ALPHA_MODE_FIXED,
-				     SCALER_POS2_ALPHA_MODE);
-	default:
-	case DRM_MODE_BLEND_PREMULTI:
-		return VC4_SET_FIELD(SCALER_POS2_ALPHA_MODE_PIPELINE,
-				     SCALER_POS2_ALPHA_MODE) |
-			SCALER_POS2_ALPHA_PREMULT;
-	case DRM_MODE_BLEND_COVERAGE:
-		return VC4_SET_FIELD(SCALER_POS2_ALPHA_MODE_PIPELINE,
-				     SCALER_POS2_ALPHA_MODE);
-	}
-}
-
-static u32 vc4_hvs5_get_alpha_blend_mode(struct drm_plane_state *state)
-{
-	if (!state->fb->format->has_alpha)
-		return VC4_SET_FIELD(SCALER5_CTL2_ALPHA_MODE_FIXED,
-				     SCALER5_CTL2_ALPHA_MODE);
-
-	switch (state->pixel_blend_mode) {
-	case DRM_MODE_BLEND_PIXEL_NONE:
-		return VC4_SET_FIELD(SCALER5_CTL2_ALPHA_MODE_FIXED,
-				     SCALER5_CTL2_ALPHA_MODE);
-	default:
-	case DRM_MODE_BLEND_PREMULTI:
-		return VC4_SET_FIELD(SCALER5_CTL2_ALPHA_MODE_PIPELINE,
-				     SCALER5_CTL2_ALPHA_MODE) |
-			SCALER5_CTL2_ALPHA_PREMULT;
-	case DRM_MODE_BLEND_COVERAGE:
-		return VC4_SET_FIELD(SCALER5_CTL2_ALPHA_MODE_PIPELINE,
-				     SCALER5_CTL2_ALPHA_MODE);
-	}
-}
 
 /* Writes out a full display list for an active plane to the plane's
  * private dlist state.
@@ -1577,8 +1537,7 @@ struct drm_plane *vc4_plane_init(struct drm_device *dev,
 
 	drm_plane_create_color_properties(plane,
 					  BIT(DRM_COLOR_YCBCR_BT601) |
-					  BIT(DRM_COLOR_YCBCR_BT709) |
-					  BIT(DRM_COLOR_YCBCR_BT2020),
+					  BIT(DRM_COLOR_YCBCR_BT709),
 					  BIT(DRM_COLOR_YCBCR_LIMITED_RANGE) |
 					  BIT(DRM_COLOR_YCBCR_FULL_RANGE),
 					  DRM_COLOR_YCBCR_BT709,
