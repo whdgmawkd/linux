@@ -135,34 +135,6 @@ static const struct hvs_format {
 		.pixel_order = HVS_PIXEL_ORDER_XYCBCR,
 		.hvs5_only = true,
 	},
-	{
-		.drm = DRM_FORMAT_XRGB2101010,
-		.hvs = HVS_PIXEL_FORMAT_RGBA1010102,
-		.pixel_order = HVS_PIXEL_ORDER_ABGR,
-		.pixel_order_hvs5 = HVS_PIXEL_ORDER_ARGB,
-		.hvs5_only = true,
-	},
-	{
-		.drm = DRM_FORMAT_ARGB2101010,
-		.hvs = HVS_PIXEL_FORMAT_RGBA1010102,
-		.pixel_order = HVS_PIXEL_ORDER_ABGR,
-		.pixel_order_hvs5 = HVS_PIXEL_ORDER_ARGB,
-		.hvs5_only = true,
-	},
-	{
-		.drm = DRM_FORMAT_ABGR2101010,
-		.hvs = HVS_PIXEL_FORMAT_RGBA1010102,
-		.pixel_order = HVS_PIXEL_ORDER_ARGB,
-		.pixel_order_hvs5 = HVS_PIXEL_ORDER_ABGR,
-		.hvs5_only = true,
-	},
-	{
-		.drm = DRM_FORMAT_XBGR2101010,
-		.hvs = HVS_PIXEL_FORMAT_RGBA1010102,
-		.pixel_order = HVS_PIXEL_ORDER_ARGB,
-		.pixel_order_hvs5 = HVS_PIXEL_ORDER_ABGR,
-		.hvs5_only = true,
-	},
 };
 
 static const struct hvs_format *vc4_get_hvs_format(u32 drm_format)
@@ -879,6 +851,14 @@ static int vc4_plane_mode_set(struct drm_plane *plane,
 	case DRM_FORMAT_MOD_BROADCOM_SAND128:
 	case DRM_FORMAT_MOD_BROADCOM_SAND256: {
 		uint32_t param = fourcc_mod_broadcom_param(fb->modifier);
+		u32 tile_w, tile, x_off, pix_per_tile;
+
+		if (fb->format->format == DRM_FORMAT_P030) {
+			hvs_format = HVS_PIXEL_FORMAT_YCBCR_10BIT;
+			tiling = SCALER_CTL0_TILING_128B;
+			tile_w = 96;
+		} else {
+			hvs_format = HVS_PIXEL_FORMAT_H264;
 
 			switch (base_format_mod) {
 			case DRM_FORMAT_MOD_BROADCOM_SAND64:
@@ -896,9 +876,6 @@ static int vc4_plane_mode_set(struct drm_plane *plane,
 			default:
 				break;
 			}
-			pix_per_tile = tile_w / fb->format->cpp[0];
-			x_off = (vc4_state->src_x % pix_per_tile) /
-				(i ? h_subsample : 1) * fb->format->cpp[i];
 		}
 		if (param > SCALER_TILE_HEIGHT_MASK) {
 			DRM_DEBUG_KMS("SAND height too large (%d)\n",
