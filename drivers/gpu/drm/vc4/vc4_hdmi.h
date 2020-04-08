@@ -140,6 +140,8 @@ struct vc4_hdmi {
 
 	struct delayed_work scrambling_work;
 
+	struct drm_property *broadcast_rgb_property;
+
 	struct i2c_adapter *ddc;
 	void __iomem *hdmicore_regs;
 	void __iomem *hd_regs;
@@ -209,6 +211,50 @@ struct vc4_hdmi {
 	 * be resilient to that.
 	 */
 	struct mutex mutex;
+
+	/**
+	 * @saved_adjusted_mode: Copy of @drm_crtc_state.adjusted_mode
+	 * for use by ALSA hooks and interrupt handlers. Protected by @mutex.
+	 */
+	struct drm_display_mode saved_adjusted_mode;
+
+	/**
+	 * @output_enabled: Is the HDMI controller currently active?
+	 * Protected by @mutex.
+	 */
+	bool output_enabled;
+
+	/**
+	 * @scdc_enabled: Is the HDMI controller currently running with
+	 * the scrambler on? Protected by @mutex.
+	 */
+	bool scdc_enabled;
+
+	/**
+	 * @output_bpc: Copy of @vc4_connector_state.output_bpc for use
+	 * outside of KMS hooks. Protected by @mutex.
+	 */
+	unsigned int output_bpc;
+
+	/**
+	 * @output_format: Copy of @vc4_connector_state.output_format
+	 * for use outside of KMS hooks. Protected by @mutex.
+	 */
+	enum vc4_hdmi_output_format output_format;
+
+	/**
+	 * @broadcast_rgb: Copy of @vc4_connector_state.broadcast_rgb
+	 * for use outside of KMS hooks. Protected by @mutex.
+	 */
+	int broadcast_rgb;
+
+	/* VC5 debugfs regset */
+	struct debugfs_regset32 cec_regset;
+	struct debugfs_regset32 csc_regset;
+	struct debugfs_regset32 dvp_regset;
+	struct debugfs_regset32 phy_regset;
+	struct debugfs_regset32 ram_regset;
+	struct debugfs_regset32 rm_regset;
 };
 
 static inline struct vc4_hdmi *
@@ -230,10 +276,17 @@ struct vc4_hdmi_connector_state {
 	unsigned long long		pixel_rate;
 	unsigned int 			output_bpc;
 	enum vc4_hdmi_output_format	output_format;
+	int				broadcast_rgb;
 };
 
 static inline struct vc4_hdmi_connector_state *
 conn_state_to_vc4_hdmi_conn_state(struct drm_connector_state *conn_state)
+{
+	return container_of(conn_state, struct vc4_hdmi_connector_state, base);
+}
+
+static inline const struct vc4_hdmi_connector_state *
+const_conn_state_to_vc4_hdmi_conn_state(const struct drm_connector_state *conn_state)
 {
 	return container_of(conn_state, struct vc4_hdmi_connector_state, base);
 }
