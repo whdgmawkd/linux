@@ -368,7 +368,7 @@ static void vc4_atomic_commit_tail(struct drm_atomic_state *state)
 		vc4_hvs_mask_underrun(dev, vc4_crtc_state->assigned_channel);
 	}
 
-	if (vc4->hvs->hvs5) {
+	if (vc4->hvs && vc4->hvs->hvs5) {
 		unsigned long core_rate = max_t(unsigned long,
 						500000000,
 						new_hvs_state->core_clock_rate);
@@ -433,7 +433,7 @@ static void vc4_atomic_commit_tail(struct drm_atomic_state *state)
 
 	drm_atomic_helper_cleanup_planes(dev, state);
 
-	if (vc4->hvs->hvs5) {
+	if (vc4->hvs && vc4->hvs->hvs5) {
 		drm_dbg(dev, "Running the core clock at %lu Hz\n",
 			new_hvs_state->core_clock_rate);
 

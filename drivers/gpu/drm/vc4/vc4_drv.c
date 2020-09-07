@@ -301,7 +301,7 @@ static int vc4_drm_bind(struct device *dev)
 	if (ret)
 		return ret;
 
-	if (vc4->firmware) {
+	if (vc4->firmware && !firmware_kms()) {
 		ret = rpi_firmware_property(vc4->firmware,
 					    RPI_FIRMWARE_NOTIFY_DISPLAY_DONE,
 					    NULL, 0);
