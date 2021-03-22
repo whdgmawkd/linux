@@ -814,9 +814,21 @@ static int vc4_plane_mode_set(struct drm_plane *plane,
 		u32 tile_w, tile, x_off, pix_per_tile;
 
 		if (fb->format->format == DRM_FORMAT_P030) {
+			/*
+			 * Spec says: bits [31:4] of the given address should point to
+			 * the 128-bit word containing the desired starting pixel,
+			 * and bits[3:0] should be between 0 and 11, indicating which
+			 * of the 12-pixels in that 128-bit word is the first pixel to be used
+			 */
+	                u32 remaining_pixels = vc4_state->src_x % 96;
+			u32 aligned = remaining_pixels / 12;
+			u32 last_bits = remaining_pixels % 12;
+
+			x_off = aligned * 16 + last_bits;
 			hvs_format = HVS_PIXEL_FORMAT_YCBCR_10BIT;
 			tiling = SCALER_CTL0_TILING_128B;
-			tile_w = 96;
+			tile_w = 128;
+			pix_per_tile = 96;
 		} else {
 			hvs_format = HVS_PIXEL_FORMAT_H264;
 
@@ -836,34 +848,16 @@ static int vc4_plane_mode_set(struct drm_plane *plane,
 			default:
 				break;
 			}
+			pix_per_tile = tile_w / fb->format->cpp[0];
+			x_off = (vc4_state->src_x % pix_per_tile) /
+				(i ? h_subsample : 1) * fb->format->cpp[i];
 		}
 		if (param > SCALER_TILE_HEIGHT_MASK) {
 			DRM_DEBUG_KMS("SAND height too large (%d)\n",
 				      param);
 			return -EINVAL;
 		}
-
-		if (fb->format->format == DRM_FORMAT_P030) {
-			hvs_format = HVS_PIXEL_FORMAT_YCBCR_10BIT;
-			tiling = SCALER_CTL0_TILING_128B;
-		} else {
-			hvs_format = HVS_PIXEL_FORMAT_H264;
-
-			switch (base_format_mod) {
-			case DRM_FORMAT_MOD_BROADCOM_SAND64:
-				tiling = SCALER_CTL0_TILING_64B;
-				break;
-			case DRM_FORMAT_MOD_BROADCOM_SAND128:
-				tiling = SCALER_CTL0_TILING_128B;
-				break;
-			case DRM_FORMAT_MOD_BROADCOM_SAND256:
-				tiling = SCALER_CTL0_TILING_256B_OR_T;
-				break;
-			default:
-				return -EINVAL;
-			}
-		}
-
+		tile = vc4_state->src_x / pix_per_tile;
 		/* Adjust the base pointer to the first pixel to be scanned
 		 * out.
 		 *
