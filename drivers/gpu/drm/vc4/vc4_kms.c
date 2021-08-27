@@ -395,20 +395,6 @@ static void vc4_atomic_commit_tail(struct drm_atomic_state *state)
 			drm_err(dev, "Timed out waiting for commit\n");
 
 		drm_crtc_commit_put(commit);
-		old_hvs_state->fifo_state[channel].pending_commit = NULL;
-	}
-
-	if (vc4->hvs && vc4->hvs->hvs5) {
-		unsigned long core_rate = max_t(unsigned long,
-						500000000, state_rate);
-
-		core_req = clk_request_start(hvs->core_clk, core_rate);
-		/*
-		 * And remove the previous one based on the HVS
-		 * requirements if any.
-		 */
-		clk_request_done(old_hvs_state->core_req);
-		old_hvs_state->core_req = NULL;
 	}
 
 	drm_atomic_helper_commit_modeset_disables(dev, state);
