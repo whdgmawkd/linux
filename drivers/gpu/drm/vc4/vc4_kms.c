@@ -348,6 +348,7 @@ static void vc4_atomic_commit_tail(struct drm_atomic_state *state)
 	struct drm_crtc *crtc;
 	struct vc4_hvs_state *old_hvs_state;
 	struct clk_request *core_req;
+	unsigned int channel;
 	int i;
 
 	old_hvs_state = vc4_hvs_get_old_global_state(state);
@@ -368,19 +369,8 @@ static void vc4_atomic_commit_tail(struct drm_atomic_state *state)
 		vc4_hvs_mask_underrun(dev, vc4_crtc_state->assigned_channel);
 	}
 
-	if (vc4->hvs && vc4->hvs->hvs5) {
-		unsigned long core_rate = max_t(unsigned long,
-						500000000,
-						new_hvs_state->core_clock_rate);
-
-		core_req = clk_request_start(hvs->core_clk, core_rate);
-	}
-
-	for_each_old_crtc_in_state(state, crtc, old_crtc_state, i) {
-		struct vc4_crtc_state *vc4_crtc_state =
-			to_vc4_crtc_state(old_crtc_state);
+	for (channel = 0; channel < HVS_NUM_CHANNELS; channel++) {
 		struct drm_crtc_commit *commit;
-		unsigned int channel = vc4_crtc_state->assigned_channel;
 		int ret;
 
 		if (!old_hvs_state->fifo_state[channel].in_use)
