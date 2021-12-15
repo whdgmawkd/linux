@@ -618,13 +618,11 @@ static int vc4_plane_allocate_lbm(struct drm_plane_state *state)
 	return 0;
 }
 
-/* The colorspace conversion matrices are held in 3 entries in the dlist.
+/*
+ * The colorspace conversion matrices are held in 3 entries in the dlist.
  * Create an array of them, with entries for each full and limited mode, and
  * each supported colorspace.
  */
-#define VC4_LIMITED_RANGE	0
-#define VC4_FULL_RANGE		1
-
 static const u32 colorspace_coeffs[2][DRM_COLOR_ENCODING_MAX][3] = {
 	{
 		/* Limited range */
