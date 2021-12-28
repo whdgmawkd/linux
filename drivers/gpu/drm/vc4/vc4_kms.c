@@ -348,8 +348,8 @@ static void vc4_atomic_commit_tail(struct drm_atomic_state *state)
 	struct vc4_hvs_state *new_hvs_state;
 	struct drm_crtc *crtc;
 	struct vc4_hvs_state *old_hvs_state;
-	struct clk_request *core_req;
 	unsigned int channel;
+	struct clk_request *core_req;
 	int i;
 
 	old_hvs_state = vc4_hvs_get_old_global_state(state);
@@ -390,18 +390,12 @@ static void vc4_atomic_commit_tail(struct drm_atomic_state *state)
 	}
 
 	if (vc4->hvs && vc4->hvs->hvs5) {
+		unsigned long state_rate = max(old_hvs_state->core_clock_rate,
+					       new_hvs_state->core_clock_rate);
 		unsigned long core_rate = max_t(unsigned long,
-						500000000,
-						new_hvs_state->core_clock_rate);
+						500000000, state_rate);
 
-		drm_dbg(dev, "Raising the core clock at %lu Hz\n", core_rate);
-
-		/*
-		 * Do a temporary request on the core clock during the
-		 * modeset.
-		 */
 		core_req = clk_request_start(hvs->core_clk, core_rate);
-
 		/*
 		 * And remove the previous one based on the HVS
 		 * requirements if any.
