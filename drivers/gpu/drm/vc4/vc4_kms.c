@@ -347,7 +347,6 @@ static void vc4_atomic_commit_tail(struct drm_atomic_state *state)
 	struct vc4_hvs_state *new_hvs_state;
 	struct drm_crtc *crtc;
 	struct vc4_hvs_state *old_hvs_state;
-	unsigned int channel;
 	struct clk_request *core_req;
 	int i;
 
@@ -374,7 +373,7 @@ static void vc4_atomic_commit_tail(struct drm_atomic_state *state)
 						500000000,
 						new_hvs_state->core_clock_rate);
 
-		clk_set_min_rate(hvs->core_clk, core_rate);
+		core_req = clk_request_start(hvs->core_clk, core_rate);
 	}
 
 	for_each_old_crtc_in_state(state, crtc, old_crtc_state, i) {
@@ -438,7 +437,7 @@ static void vc4_atomic_commit_tail(struct drm_atomic_state *state)
 		drm_dbg(dev, "Running the core clock at %lu Hz\n",
 			new_hvs_state->core_clock_rate);
 
-		clk_set_min_rate(hvs->core_clk, new_hvs_state->core_clock_rate);
+		clk_request_done(core_req);
 	}
 }
 
